@@ -317,9 +317,9 @@ inline static void sobelP(double *img, double *buf, double c_coeff) {
     }
 }
 
-inline static void fill_buff(double *buff, int row, int cols, int col) {
+inline static void fill_buff(double *buff, double **img int row, int cols, int col) {
     if (buff != NULL)
-        buff[row] = (*buf)[row * cols + col];
+        buff[row] = (*img)[row * cols + col];
 }
 
 /*
@@ -392,8 +392,8 @@ inline static void vcdP(double **img, double **buf, const struct TaskInput *TI,
 #undef EXTRA_ARGS
             }
             if (row >= 0 && row < rows) {
-                fill_buff(l_buff, row, cols, 0);
-                fill_buff(r_buff, row, cols, cols -1);
+                fill_buff(l_buff, buf, row, cols, 0);
+                fill_buff(r_buff, buf, row, cols, cols -1);
             }
         }
         MPI_Allreduce(&deltaMax, &deltaMax, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
@@ -551,11 +551,11 @@ inline static void vcdPOptimized(double **img, double **buf, const struct TaskIn
                 for (int col = 0; col < cols; col++) {
                     previous = runChecked(row, col, &deltaMax, previous);
                 }
-                fill_buff(l_buff, row, cols, 0);
-                fill_buff(r_buff, row, cols, cols -1);
+                fill_buff(l_buff, buf, row, cols, 0);
+                fill_buff(r_buff, buf, row, cols, cols -1);
             } else {
                 previous = runChecked(row, 0, &deltaMax, previous);
-                fill_buff(l_buff, row, cols, 0);
+                fill_buff(l_buff, buf, row, cols, 0);
                 // Run this part unchecked
                 for (int col = 1; col < cols - 1; col++) {
                     double current_pixel = S(col + row * cols);
@@ -579,7 +579,7 @@ inline static void vcdPOptimized(double **img, double **buf, const struct TaskIn
                     previous = tmp;
                 }
                 runChecked(row, cols - 1, &deltaMax, previous);
-                fill_buff(r_buff, row, cols, cols -1);
+                fill_buff(r_buff, buf, row, cols, cols -1);
             }
         }
 
