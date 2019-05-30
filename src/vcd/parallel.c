@@ -248,7 +248,9 @@ inline static void wait_for_horizontal_neighbours() {
 }
 
 inline static void send_receive_borders(int self, double *image, double *l_buff, double *r_buff) {
+    to_recv_bot = 0; to_recv_sides = 0; to_recv_top = 0;
     irecv_neighbours(self);
+    sent = 0;
     isend_to_neighbours(image, self, l_buff, r_buff);
     // Wait until everything has been copied to a buffer
     MPI_Waitall(sent, s_req, MPI_STATUSES_IGNORE);
@@ -285,7 +287,7 @@ inline static void sobelP(double *img, double *buf, double c_coeff) {
     wait_for_horizontal_neighbours();
 
     // Split up the loop so only the outer parts of the image have to be accessed with bounds check
-#pragma omp parallel for shared(img, buf)
+#pragma omp parallel for
     for (int row = 0; row < rows; row++) {
         double sx, sy;
         // Run first and last row always checked
@@ -315,12 +317,17 @@ inline static void sobelP(double *img, double *buf, double c_coeff) {
     }
 }
 
+inline static void fill_buff(double *buff, int row, int cols, int col) {
+    if (buff != NULL)
+        buff[row] = (*buf)[row * cols + col];
+}
+
 /*
  * Perform the the vcd operator on a image part. The same frame setting as Sobel. l_buff and r_buff stores the results
  * of the left and right part of the image part.
  * Task a - e
  */
-void vcdP(double **img, double **buf, const struct TaskInput *TI,
+inline static void vcdP(double **img, double **buf, const struct TaskInput *TI,
           double *l_buff, double *r_buff, int self) {
     // local number of rows and columns
     int rows = l_rows;
@@ -385,10 +392,8 @@ void vcdP(double **img, double **buf, const struct TaskInput *TI,
 #undef EXTRA_ARGS
             }
             if (row >= 0 && row < rows) {
-                if (l_buff != NULL)
-                    l_buff[row] = (*buf)[row * cols];
-                if (r_buff != NULL)
-                    r_buff[row] = (*buf)[row * cols + cols - 1];
+                fill_buff(l_buff, row, cols, 0);
+                fill_buff(r_buff, row, cols, cols -1);
             }
         }
         MPI_Allreduce(&deltaMax, &deltaMax, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
@@ -413,7 +418,7 @@ inline static double exp_approx(double x) {
 }
 
 /* Perform the the optimized vcd operator on a image part. Task f & g. */
-void vcdPOptimized(double **img, double **buf, const struct TaskInput *TI,
+inline static void vcdPOptimized(double **img, double **buf, const struct TaskInput *TI,
                    double *l_buff, double *r_buff, int self) {
     // local number of rows and columns
     int rows = l_rows;
@@ -546,15 +551,11 @@ void vcdPOptimized(double **img, double **buf, const struct TaskInput *TI,
                 for (int col = 0; col < cols; col++) {
                     previous = runChecked(row, col, &deltaMax, previous);
                 }
-                if (l_buff != NULL)
-                    l_buff[row] = (*buf)[row * cols];
-                
-                if (r_buff != NULL)
-                    r_buff[row] = (*buf)[row * cols + cols - 1];
+                fill_buff(l_buff, row, cols, 0);
+                fill_buff(r_buff, row, cols, cols -1);
             } else {
                 previous = runChecked(row, 0, &deltaMax, previous);
-                if (l_buff != NULL)
-                    l_buff[row] = (*buf)[row * cols];
+                fill_buff(l_buff, row, cols, 0);
                 // Run this part unchecked
                 for (int col = 1; col < cols - 1; col++) {
                     double current_pixel = S(col + row * cols);
@@ -578,8 +579,7 @@ void vcdPOptimized(double **img, double **buf, const struct TaskInput *TI,
                     previous = tmp;
                 }
                 runChecked(row, cols - 1, &deltaMax, previous);
-                if (r_buff != NULL)
-                    r_buff[row] = (*buf)[row * cols + cols - 1];
+                fill_buff(r_buff, row, cols, cols -1);
             }
         }
 
@@ -714,6 +714,9 @@ void compute_parallel(const struct TaskInput *TI) {
         }
     }
 
+    MPI_Waitall(sent, s_req, MPI_STATUSES_IGNORE);
+    sent = 0;
+
     if (TI->doSobel) {
         sobelP(image_partD, temp_partD, TI->sobelC);
         double *tmp = image_partD;
@@ -733,7 +736,6 @@ void compute_parallel(const struct TaskInput *TI) {
         int v = lrint(image_partD[i] * maxcolor);
         image[i] = (v < 0 ? 0 : (v > maxcolor ? maxcolor : v));
     }
-
     free(image_partD);
     free(temp_partD);
 
