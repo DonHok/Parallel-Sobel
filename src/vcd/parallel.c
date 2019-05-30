@@ -20,6 +20,11 @@
  * Approximate the exp call(purely compute bound) and the execution time decreases several times.                  *
  *******************************************************************************************************************
  */
+/*
+Speedup(TrueMarble):
+-r : 3.25(2 Cores), 5.66(4 Cores), 10.12(8 Cores), 20.05(16 Cores)
+without -r: 1.43(2 Cores), 2.38(4 Cores), 4.59(8 Cores), 9.41(16Cores)
+ */
 
 #include <math.h>
 #include <mpi.h>
