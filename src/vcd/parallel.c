@@ -384,7 +384,7 @@ void vcdP(double **img, double **buf, const struct TaskInput *TI,
                 }
 #undef EXTRA_ARGS
             }
-            if (row != 0 && row < rows - 1) {
+            if (row >= 0 && row < rows) {
                 if (l_buff != NULL)
                     l_buff[row] = (*buf)[row * cols];
                 if (r_buff != NULL)
@@ -546,6 +546,11 @@ void vcdPOptimized(double **img, double **buf, const struct TaskInput *TI,
                 for (int col = 0; col < cols; col++) {
                     previous = runChecked(row, col, &deltaMax, previous);
                 }
+                if (l_buff != NULL)
+                    l_buff[row] = (*buf)[row * cols];
+                
+                if (r_buff != NULL)
+                    r_buff[row] = (*buf)[row * cols + cols - 1];
             } else {
                 previous = runChecked(row, 0, &deltaMax, previous);
                 if (l_buff != NULL)
