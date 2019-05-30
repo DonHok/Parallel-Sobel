@@ -317,7 +317,7 @@ inline static void sobelP(double *img, double *buf, double c_coeff) {
     }
 }
 
-inline static void fill_buff(double *buff, double **img int row, int cols, int col) {
+inline static void fill_buff(double *buff, double **img, int row, int cols, int col) {
     if (buff != NULL)
         buff[row] = (*img)[row * cols + col];
 }
