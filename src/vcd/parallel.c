@@ -31,7 +31,6 @@
 #include "ppp_pnm/ppp_pnm.h"
 
 double *left, *right, *top, *bottom;
-
 int row_offset, col_offset, gg_rows, gg_cols, l_columns, l_rows, np;
 MPI_Request recv_sides[2];
 MPI_Request recv_top[3];
@@ -210,7 +209,7 @@ inline static void isend_to_neighbours(double *image, int pid, double *l_buff, d
     if (row_block_id < n_row_blocks - 1)
         send((l_rows - 1) * l_columns, l_columns, pid + n_col_blocks, image);
     // send to bot left
-    if (row_block_id < n_row_blocks - 1 && col_block_id > 0)
+    if (row_block_id < n_row_blocks l- 1 && col_block_id > 0)
         send((l_rows - 1) * l_columns, 1, pid + n_col_blocks - 1, image);
     // send to bot right
     if (row_block_id < n_row_blocks - 1 && col_block_id < n_col_blocks - 1)
@@ -255,8 +254,6 @@ inline static void send_receive_borders(int self, double *image, double *l_buff,
     MPI_Waitall(sent, s_req, MPI_STATUSES_IGNORE);
     sent = 0;
 }
-
-
 
 /* Compute sobel for a pixel with performing all bounds checks */
 inline static double run_sobel_checked(int row, int col, double *img, int rows, int cols, double c_coeff) {
@@ -560,7 +557,7 @@ void vcdPOptimized(double **img, double **buf, const struct TaskInput *TI,
                     double tmp = phi(S(col + 1 + row * cols) - current_pixel);
                     double delta = ((tmp - previous + result_buff[own_results]
                                      - result_buff[((row - 1) * cols + col) * 3]) / kappa)
-                                   + ((result_buff[own_results+ 1]
+                                   + ((result_buff[own_results + 1]
                                        - result_buff[((row - 1) * cols + col - 1) * 3 + 1]
                                        + result_buff[own_results + 2]
                                        - result_buff[((row - 1) * cols + col + 1) * 3 + 2]) / kappa_times_two);
