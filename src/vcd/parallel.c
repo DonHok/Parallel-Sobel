@@ -209,7 +209,7 @@ inline static void isend_to_neighbours(double *image, int pid, double *l_buff, d
     if (row_block_id < n_row_blocks - 1)
         send((l_rows - 1) * l_columns, l_columns, pid + n_col_blocks, image);
     // send to bot left
-    if (row_block_id < n_row_blocks l- 1 && col_block_id > 0)
+    if (row_block_id < n_row_blocks - 1 && col_block_id > 0)
         send((l_rows - 1) * l_columns, 1, pid + n_col_blocks - 1, image);
     // send to bot right
     if (row_block_id < n_row_blocks - 1 && col_block_id < n_col_blocks - 1)
