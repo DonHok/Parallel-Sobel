@@ -663,7 +663,7 @@ void compute_parallel(const struct TaskInput *TI) {
 
     // offset if the partial image within the complete image
     col_offset = calculateOffset(self % n_col_blocks, gg_cols, n_col_blocks);
-    row_offset = calculateOffset(self / n_row_blocks, gg_rows, n_row_blocks);
+    row_offset = calculateOffset(self / n_col_blocks, gg_rows, n_row_blocks);
 
     // Prepare buffers for data received from neighbours
     right = left = bottom = top = NULL;
