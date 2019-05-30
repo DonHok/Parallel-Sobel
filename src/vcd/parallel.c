@@ -158,15 +158,15 @@ static inline void freeChecked(double *toFree, int idx) {
 inline static void recv_from_vertical(double *buff, int self, int up) {
     int source = up ? self - n_col_blocks : self + n_col_blocks;
     // receive from top/bot left
-    if ((source - 1 >= 0 && (source - 1) / n_col_blocks != self / n_col_blocks))
+    if (source - 1 >= 0 && (source - 1) / n_col_blocks == (source / n_col_blocks))
         MPI_Irecv(&buff[-1], 1, MPI_DOUBLE, source - 1, 0, MPI_COMM_WORLD,
                   up ? &recv_top[to_recv_top++] : &recv_bot[to_recv_bot++]);
     // receive from top/bot
     MPI_Irecv(buff, l_columns, MPI_DOUBLE, source, 0, MPI_COMM_WORLD,
               up ? &recv_top[to_recv_top++] : &recv_bot[to_recv_bot++]);
     // receive from top/bot right
-    if (source + 1 < np && (source + 1) / n_col_blocks != self / n_col_blocks)
-        MPI_Irecv(&buff[l_rows], 1, MPI_DOUBLE, source + 1, 0, MPI_COMM_WORLD,
+    if (source + 1 < np && (source + 1) / n_col_blocks == (source / n_col_blocks))
+        MPI_Irecv(&buff[l_columns], 1, MPI_DOUBLE, source + 1, 0, MPI_COMM_WORLD,
                   up ? &recv_top[to_recv_top++] : &recv_bot[to_recv_bot++]);
 }
 
@@ -622,12 +622,13 @@ void compute_parallel(const struct TaskInput *TI) {
 
     if (self == 0) {
         image = ppp_pnm_read(TI->filename, &kind, &grow_cols[0], &grow_cols[1], &maxcolor);
+        if (TI->debugOutput)
+            printf("Dimensions: rows: %d cols: %d\n", grow_cols[0], grow_cols[1]);
         if ((image == NULL) | (kind != PNM_KIND_PGM)) {
             fprintf(stderr, "Could not load image from file '%s'.\n", TI->filename);
             MPI_Abort(MPI_COMM_WORLD, 1);
         }
     }
-
     MPI_Bcast(&grow_cols, 2, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(&maxcolor, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
@@ -647,8 +648,8 @@ void compute_parallel(const struct TaskInput *TI) {
     }
 
     // number of rows and cols of this process
-    l_rows = calculateLength(self, gg_rows, n_row_blocks);
-    l_columns = calculateLength(self, gg_cols, n_col_blocks);
+    l_rows = calculateLength(self / n_col_blocks, gg_rows, n_row_blocks);
+    l_columns = calculateLength(self % n_col_blocks, gg_cols, n_col_blocks);
 
     if (self != 0) {
         image = malloc(sizeof(uint8_t) * l_rows * l_columns);
@@ -665,7 +666,6 @@ void compute_parallel(const struct TaskInput *TI) {
     // Prepare buffers for data received from neighbours
     right = left = bottom = top = NULL;
     prepareNeighbourBuffers(self);
-
     MPI_Scatterv(image, sendcnt, displs, MPI_UINT8_T, (self == 0 ? MPI_IN_PLACE : image), l_rows * l_columns,
                  MPI_UINT8_T, 0, MPI_COMM_WORLD);
 
